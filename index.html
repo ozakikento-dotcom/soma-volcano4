@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🌋 SOMA's Volcano Multiplication Challenge!! 🌋</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  font-family:"Arial Rounded MT Bold",Arial,sans-serif;
+  background:linear-gradient(#cce7ff,#fff);
+  text-align:center;
+  padding:20px;
+}
+
+h1{font-size:2.4em;color:#ff5722}
+#stats{font-size:1.2em;margin:8px;color:#333}
+
+#question{font-size:3.2em;margin:20px 0}
+
+/* ===== 6 Choices ===== */
+.choices{
+  display:grid;
+  grid-template-columns:repeat(3, minmax(120px, 1fr));
+  gap:18px;
+  max-width:420px;
+  margin:0 auto;
+}
+
+.choice{
+  font-size:2em;
+  padding:18px;
+  border-radius:20px;
+  border:none;
+  background:#fff;
+  box-shadow:0 4px 0 #ccc;
+}
+
+.choice:active{
+  transform:translateY(4px);
+  box-shadow:none;
+}
+
+#message{font-size:1.6em;height:1.6em;margin-top:10px}
+
+/* Stickers */
+#stickerGrid{
+  display:grid;
+  grid-template-columns:repeat(3,160px);
+  gap:16px;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.sticker{
+  width:160px;
+  height:160px;
+  background:#fff8e1;
+  border-radius:24px;
+  border:4px solid #ff9800;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.sticker img{width:150px}
+
+/* Zoom */
+#zoom{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:3000;
+}
+#zoom img{width:90vw;max-width:520px}
+
+#resetBtn{
+  margin-top:20px;
+  font-size:1em;
+  padding:6px 16px;
+  border-radius:12px;
+  border:none;
+  background:#bbb;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🌋 SOMA's Volcano Multiplication Challenge!! 🌋</h1>
+
+<div id="stats">
+  Score: <b id="score">0</b> pt
+</div>
+
+<div id="question">?</div>
+
+<div class="choices" id="choices"></div>
+
+<div id="message"></div>
+
+<h2>🏆 My Volcano Stickers</h2>
+<div id="stickerGrid"></div>
+
+<button id="resetBtn" onclick="resetGame()">Reset Progress</button>
+
+<div id="zoom" onclick="this.style.display='none'"><img></div>
+
+<audio id="soundCorrect" src="Correct.m4a"></audio>
+<audio id="soundIncorrect" src="Incorrect.m4a"></audio>
+
+<script>
+/* ===== SAVE ===== */
+const SAVE_KEY="soma_volcano_mc";
+
+let score=0;
+let a,b,correctAnswer;
+
+/* Stickers */
+let remainingStamps=[...Array(50)].map((_,i)=>`volst (${i+1}).png`);
+remainingStamps.sort(()=>Math.random()-0.5);
+let earnedStamps=[];
+
+function saveGame(){
+  localStorage.setItem(SAVE_KEY, JSON.stringify({
+    score, remainingStamps, earnedStamps
+  }));
+}
+
+function loadGame(){
+  const raw=localStorage.getItem(SAVE_KEY);
+  if(!raw) return;
+  const d=JSON.parse(raw);
+  score=d.score ?? 0;
+  remainingStamps=d.remainingStamps ?? remainingStamps;
+  earnedStamps=d.earnedStamps ?? [];
+  earnedStamps.forEach(addStickerToGrid);
+}
+
+function resetGame(){
+  if(!confirm("Reset all progress?")) return;
+  localStorage.removeItem(SAVE_KEY);
+  location.reload();
+}
+
+/* ===== QUESTION ===== */
+function newQuestion(){
+  a=Math.floor(Math.random()*12)+1;
+  b=Math.floor(Math.random()*12)+1;
+  correctAnswer=a*b;
+  question.textContent=`${a} × ${b}`;
+  generateChoices();
+}
+
+function generateChoices(){
+  const set=new Set([correctAnswer]);
+  while(set.size < 6){
+    set.add(Math.floor(Math.random()*144)+1);
+  }
+  const arr=[...set].sort(()=>Math.random()-0.5);
+  choices.innerHTML="";
+  arr.forEach(v=>{
+    const btn=document.createElement("button");
+    btn.className="choice";
+    btn.textContent=v;
+    btn.onclick=()=>check(v);
+    choices.appendChild(btn);
+  });
+}
+
+/* ===== CHECK ===== */
+function check(v){
+  if(v===correctAnswer){
+    score+=2;
+    soundCorrect.play();
+    message.textContent="🎉 Correct!";
+  }else{
+    score=Math.max(0,score-1);
+    soundIncorrect.play();
+    message.textContent="😊 Try again!";
+  }
+
+  document.getElementById("score").textContent=score;
+
+  while(score >= (earnedStamps.length+1)*20){
+    giveSticker();
+  }
+
+  saveGame();
+  setTimeout(newQuestion,600);
+}
+
+/* ===== STICKERS ===== */
+function giveSticker(){
+  if(remainingStamps.length===0) return;
+  const src=remainingStamps.shift();
+  earnedStamps.push(src);
+  addStickerToGrid(src);
+}
+
+function addStickerToGrid(src){
+  const s=document.createElement("div");
+  s.className="sticker";
+  const img=document.createElement("img");
+  img.src=src;
+  img.onclick=()=>{
+    zoom.style.display="flex";
+    zoom.querySelector("img").src=src;
+  };
+  s.appendChild(img);
+  stickerGrid.appendChild(s);
+}
+
+/* ===== INIT ===== */
+loadGame();
+document.getElementById("score").textContent=score;
+newQuestion();
+</script>
+
+</body>
+</html>
