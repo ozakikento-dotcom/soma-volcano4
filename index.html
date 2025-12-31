@@ -14,11 +14,42 @@ body{
 }
 
 h1{font-size:2.4em;color:#ff5722}
-#stats{font-size:1.2em;margin:8px;color:#333}
+#stats{font-size:1.3em;margin:6px;color:#333}
 
-#question{font-size:3.2em;margin:20px 0}
+#question{font-size:3.2em;margin:18px 0}
 
-/* ===== 6 Choices ===== */
+/* ===== Progress to Next Sticker ===== */
+#progressBox{
+  max-width:420px;
+  margin:12px auto 16px;
+}
+#progressLabel{
+  font-size:1.2em;
+  font-weight:bold;
+  color:#ff5722;
+  margin-bottom:4px;
+}
+.progress-bg-big{
+  width:100%;
+  height:28px;
+  background:#eee;
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.25);
+}
+.progress-bar-big{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#ffeb3b,#ff9800,#ff5722);
+  transition:width 0.4s ease;
+}
+#progressText{
+  margin-top:4px;
+  font-size:1em;
+  color:#555;
+}
+
+/* ===== Choices (6) ===== */
 .choices{
   display:grid;
   grid-template-columns:repeat(3, minmax(120px, 1fr));
@@ -26,7 +57,6 @@ h1{font-size:2.4em;color:#ff5722}
   max-width:420px;
   margin:0 auto;
 }
-
 .choice{
   font-size:2em;
   padding:18px;
@@ -35,7 +65,6 @@ h1{font-size:2.4em;color:#ff5722}
   background:#fff;
   box-shadow:0 4px 0 #ccc;
 }
-
 .choice:active{
   transform:translateY(4px);
   box-shadow:none;
@@ -43,7 +72,7 @@ h1{font-size:2.4em;color:#ff5722}
 
 #message{font-size:1.6em;height:1.6em;margin-top:10px}
 
-/* Stickers */
+/* ===== Stickers ===== */
 #stickerGrid{
   display:grid;
   grid-template-columns:repeat(3,160px);
@@ -51,7 +80,6 @@ h1{font-size:2.4em;color:#ff5722}
   justify-content:center;
   margin-top:20px;
 }
-
 .sticker{
   width:160px;
   height:160px;
@@ -61,11 +89,11 @@ h1{font-size:2.4em;color:#ff5722}
   display:flex;
   align-items:center;
   justify-content:center;
+  cursor:pointer;
 }
-
 .sticker img{width:150px}
 
-/* Zoom */
+/* ===== Zoom ===== */
 #zoom{
   position:fixed;
   inset:0;
@@ -77,6 +105,7 @@ h1{font-size:2.4em;color:#ff5722}
 }
 #zoom img{width:90vw;max-width:520px}
 
+/* ===== Reset ===== */
 #resetBtn{
   margin-top:20px;
   font-size:1em;
@@ -94,6 +123,14 @@ h1{font-size:2.4em;color:#ff5722}
 
 <div id="stats">
   Score: <b id="score">0</b> pt
+</div>
+
+<div id="progressBox">
+  <div id="progressLabel">Next Sticker 🌋</div>
+  <div class="progress-bg-big">
+    <div class="progress-bar-big" id="progressBar"></div>
+  </div>
+  <div id="progressText">0 / 20 pt</div>
 </div>
 
 <div id="question">?</div>
@@ -114,12 +151,12 @@ h1{font-size:2.4em;color:#ff5722}
 
 <script>
 /* ===== SAVE ===== */
-const SAVE_KEY="soma_volcano_mc";
+const SAVE_KEY="soma_volcano_mc6";
 
 let score=0;
 let a,b,correctAnswer;
 
-/* Stickers */
+/* Stickers: 50 */
 let remainingStamps=[...Array(50)].map((_,i)=>`volst (${i+1}).png`);
 remainingStamps.sort(()=>Math.random()-0.5);
 let earnedStamps=[];
@@ -146,7 +183,21 @@ function resetGame(){
   location.reload();
 }
 
-/* ===== QUESTION ===== */
+/* ===== Progress Bar ===== */
+function updateProgressBar(){
+  const earned = score % 20;
+  const pct = (earned / 20) * 100;
+  progressBar.style.width = pct + "%";
+  progressText.textContent = `${earned} / 20 pt`;
+
+  if(earned >= 16){
+    progressBar.style.filter="brightness(1.2)";
+  }else{
+    progressBar.style.filter="none";
+  }
+}
+
+/* ===== Question ===== */
 function newQuestion(){
   a=Math.floor(Math.random()*12)+1;
   b=Math.floor(Math.random()*12)+1;
@@ -171,7 +222,7 @@ function generateChoices(){
   });
 }
 
-/* ===== CHECK ===== */
+/* ===== Check ===== */
 function check(v){
   if(v===correctAnswer){
     score+=2;
@@ -184,6 +235,7 @@ function check(v){
   }
 
   document.getElementById("score").textContent=score;
+  updateProgressBar();
 
   while(score >= (earnedStamps.length+1)*20){
     giveSticker();
@@ -193,12 +245,20 @@ function check(v){
   setTimeout(newQuestion,600);
 }
 
-/* ===== STICKERS ===== */
+/* ===== Stickers ===== */
 function giveSticker(){
   if(remainingStamps.length===0) return;
   const src=remainingStamps.shift();
   earnedStamps.push(src);
   addStickerToGrid(src);
+
+  // flash bar
+  progressBar.style.transition="none";
+  progressBar.style.width="100%";
+  setTimeout(()=>{
+    progressBar.style.transition="width 0.4s ease";
+    progressBar.style.width="0%";
+  },200);
 }
 
 function addStickerToGrid(src){
@@ -214,9 +274,10 @@ function addStickerToGrid(src){
   stickerGrid.appendChild(s);
 }
 
-/* ===== INIT ===== */
+/* ===== Init ===== */
 loadGame();
 document.getElementById("score").textContent=score;
+updateProgressBar();
 newQuestion();
 </script>
 
